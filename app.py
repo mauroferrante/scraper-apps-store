@@ -1,6 +1,6 @@
 """
-Streamlit dashboard for Simply Wall St App Store ranking trends.
-Professional UI with hero chart, executive summary, and country deep-dive.
+Streamlit dashboard for App Store ranking trends.
+Tracks Simply Wall St + competitors across multiple markets.
 """
 
 import os
@@ -11,6 +11,26 @@ import plotly.graph_objects as go
 import streamlit as st
 
 CSV_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "rankings_history.csv")
+
+OUR_APP = "Simply Wall St"
+
+COUNTRY_LABELS = {
+    "US": "🇺🇸 United States",
+    "AU": "🇦🇺 Australia",
+    "CA": "🇨🇦 Canada",
+    "DE": "🇩🇪 Germany",
+    "GB": "🇬🇧 United Kingdom",
+}
+
+# Consistent colors per competitor
+APP_COLORS = {
+    "Simply Wall St": "#22c55e",   # green — our app stands out
+    "Sharesight": "#3b82f6",       # blue
+    "Snowball Analytics": "#a855f7", # purple
+    "Seeking Alpha": "#f97316",    # orange
+    "Yahoo Finance": "#6366f1",    # indigo
+    "MarketWatch": "#ef4444",      # red
+}
 
 st.set_page_config(
     page_title="Simply Wall St — App Store Rankings",
@@ -23,10 +43,7 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    /* Tighten top padding */
     .block-container { padding-top: 1.5rem; }
-
-    /* Style metric cards */
     [data-testid="stMetric"] {
         background: linear-gradient(135deg, #1e1e2e 0%, #2a2a3e 100%);
         border: 1px solid #3a3a5c;
@@ -41,32 +58,29 @@ st.markdown(
         font-size: 2rem !important;
         font-weight: 700 !important;
     }
-
-    /* Unranked styling */
-    .unranked-badge {
-        display: inline-block;
-        background: #3a3a5c;
-        color: #808098;
-        padding: 4px 12px;
-        border-radius: 6px;
-        font-size: 0.85rem;
-        font-weight: 500;
-    }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
 
-# ── Data loading ────────────────────────────────────────────────────────────
+# ── Data loading with backward compatibility ────────────────────────────────
 @st.cache_data(ttl=300)
 def load_data() -> pd.DataFrame:
     raw = pd.read_csv(CSV_FILE)
     raw["date"] = pd.to_datetime(raw["date"])
     raw["keyword_rank"] = pd.to_numeric(raw["keyword_rank"], errors="coerce")
     raw["category_rank"] = pd.to_numeric(raw["category_rank"], errors="coerce")
-    # Deduplicate: keep last entry per date/country/keyword
-    raw = raw.drop_duplicates(subset=["date", "country", "keyword"], keep="last")
+
+    # Backward compatibility: fill missing app_name with our app
+    if "app_name" not in raw.columns:
+        raw["app_name"] = OUR_APP
+    else:
+        raw["app_name"] = raw["app_name"].fillna(OUR_APP)
+        raw.loc[raw["app_name"].str.strip() == "", "app_name"] = OUR_APP
+
+    # Deduplicate: keep last entry per date/app/country/keyword
+    raw = raw.drop_duplicates(subset=["date", "app_name", "country", "keyword"], keep="last")
     return raw
 
 
@@ -80,11 +94,31 @@ if df.empty:
     st.warning("No ranking data yet. Run `python tracker.py` to collect the first batch.")
     st.stop()
 
+# ── Derived datasets ────────────────────────────────────────────────────────
+sws_df = df[df["app_name"] == OUR_APP].copy()  # Simply Wall St only
 
-# ── Helper: compute delta between latest and previous day ───────────────────
-def _compute_delta(data: pd.DataFrame, country: str, keyword: str, col: str = "keyword_rank"):
-    """Return (current_rank, delta_str, delta_color) for a given country+keyword."""
-    subset = data[(data["country"] == country) & (data["keyword"] == keyword)].sort_values("date")
+ALL_COUNTRIES = sorted(df["country"].unique().tolist())
+ALL_KEYWORDS = sorted(df["keyword"].unique().tolist())
+ALL_APPS = sorted(df["app_name"].unique().tolist())
+LATEST_DATE = df["date"].max()
+latest_df = df[df["date"] == LATEST_DATE]
+sws_latest = latest_df[latest_df["app_name"] == OUR_APP]
+
+
+# ── Helpers ─────────────────────────────────────────────────────────────────
+def _compute_delta(
+    data: pd.DataFrame,
+    country: str,
+    keyword: str,
+    col: str = "keyword_rank",
+    app_name: str = OUR_APP,
+):
+    """Return (current_rank, delta_str, delta_color) for a given app/country/keyword."""
+    subset = data[
+        (data["app_name"] == app_name)
+        & (data["country"] == country)
+        & (data["keyword"] == keyword)
+    ].sort_values("date")
     if subset.empty:
         return None, None, "off"
 
@@ -114,18 +148,32 @@ def _compute_delta(data: pd.DataFrame, country: str, keyword: str, col: str = "k
     return current, delta_str, "normal"
 
 
-def _rank_display(val) -> str:
-    """Format a rank value: integer or styled 'Unranked'."""
-    if val is None or (isinstance(val, float) and pd.isna(val)):
-        return "—"
-    return str(int(val))
-
-
-# ── Constants ───────────────────────────────────────────────────────────────
-ALL_COUNTRIES = sorted(df["country"].unique().tolist())
-ALL_KEYWORDS = sorted(df["keyword"].unique().tolist())
-LATEST_DATE = df["date"].max()
-latest_df = df[df["date"] == LATEST_DATE]
+def _chart_layout(fig, height: int = 480):
+    """Apply standard chart styling."""
+    fig.update_yaxes(
+        autorange="reversed",
+        range=[200, 1],
+        title="Rank Position",
+        gridcolor="rgba(128,128,160,0.15)",
+        showgrid=True,
+    )
+    fig.update_xaxes(gridcolor="rgba(128,128,160,0.1)", showgrid=True)
+    fig.update_layout(
+        height=height,
+        hovermode="x unified",
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+        margin=dict(l=20, r=20, t=30, b=20),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="left",
+            x=0,
+            font=dict(size=12),
+        ),
+    )
+    return fig
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -134,15 +182,15 @@ latest_df = df[df["date"] == LATEST_DATE]
 st.title("📊 Simply Wall St — App Store Rankings")
 st.caption(
     f"Tracking keyword & category positions across {len(ALL_COUNTRIES)} markets  ·  "
-    f"Last updated **{LATEST_DATE.strftime('%B %d, %Y')}**"
+    f"Last updated **{LATEST_DATE.strftime('%B %d, %Y')}**  ·  "
+    f"**{len(ALL_APPS)}** apps tracked"
 )
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  HERO SECTION — Trend Chart
+#  HERO SECTION — Simply Wall St Trend Chart
 # ═══════════════════════════════════════════════════════════════════════════
 with st.container(border=True):
-    # Default selections
     default_countries = [c for c in ["US", "AU"] if c in ALL_COUNTRIES]
     default_keywords = [k for k in ["stock analysis"] if k in ALL_KEYWORDS]
 
@@ -162,8 +210,8 @@ with st.container(border=True):
             key="hero_keywords",
         )
 
-    # Filter data for chart
-    chart_data = df.copy()
+    # Filter to Simply Wall St only
+    chart_data = sws_df.copy()
     if sel_countries:
         chart_data = chart_data[chart_data["country"].isin(sel_countries)]
     if sel_keywords:
@@ -183,59 +231,28 @@ with st.container(border=True):
             y="keyword_rank",
             color="label",
             markers=True,
-            labels={
-                "keyword_rank": "Rank Position",
-                "date": "",
-                "label": "",
-            },
+            labels={"keyword_rank": "Rank Position", "date": "", "label": ""},
             color_discrete_sequence=px.colors.qualitative.Set2,
         )
-
-        fig.update_yaxes(
-            autorange="reversed",
-            range=[200, 1],
-            title="Rank Position",
-            gridcolor="rgba(128,128,160,0.15)",
-            showgrid=True,
-        )
-        fig.update_xaxes(
-            gridcolor="rgba(128,128,160,0.1)",
-            showgrid=True,
-        )
-        fig.update_layout(
-            height=480,
-            hovermode="x unified",
-            plot_bgcolor="rgba(0,0,0,0)",
-            paper_bgcolor="rgba(0,0,0,0)",
-            margin=dict(l=20, r=20, t=30, b=20),
-            legend=dict(
-                orientation="h",
-                yanchor="bottom",
-                y=1.02,
-                xanchor="left",
-                x=0,
-                font=dict(size=12),
-            ),
-        )
-
-        # Add rank=1 annotation line
+        fig = _chart_layout(fig, height=480)
         fig.add_hline(y=1, line_dash="dot", line_color="gold", opacity=0.4, annotation_text="#1")
-
         st.plotly_chart(fig, use_container_width=True)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  TABBED SECTIONS
 # ═══════════════════════════════════════════════════════════════════════════
-tab_summary, tab_country = st.tabs(["🏆 Executive Summary", "🌍 Country Deep-Dive"])
+tab_summary, tab_country, tab_battle = st.tabs(
+    ["🏆 Executive Summary", "🌍 Country Deep-Dive", "⚔️ Competitor Battleground"]
+)
 
 
-# ── TAB 1: Executive Summary ───────────────────────────────────────────────
+# ── TAB 1: Executive Summary (Simply Wall St only) ─────────────────────────
 with tab_summary:
     st.markdown("#### Top 5 Best Keyword Rankings")
-    st.caption("Highest-ranking keyword positions across all countries today.")
+    st.caption(f"Highest-ranking keyword positions for {OUR_APP} across all countries today.")
 
-    ranked = latest_df.dropna(subset=["keyword_rank"]).copy()
+    ranked = sws_latest.dropna(subset=["keyword_rank"]).copy()
     ranked["keyword_rank"] = ranked["keyword_rank"].astype(int)
     top5 = ranked.nsmallest(5, "keyword_rank")
 
@@ -259,20 +276,20 @@ with tab_summary:
     st.markdown("#### Biggest Movers")
     st.caption("Largest rank changes compared to the previous day.")
 
-    dates = sorted(df["date"].unique())
-    if len(dates) < 2:
+    sws_dates = sorted(sws_df["date"].unique())
+    if len(sws_dates) < 2:
         st.info("Need at least 2 days of data to show movers. Check back tomorrow!")
     else:
-        prev_date = dates[-2]
-        prev_df = df[df["date"] == prev_date]
+        prev_date = sws_dates[-2]
+        prev_sws = sws_df[sws_df["date"] == prev_date]
 
         movers = []
-        for _, row in latest_df.iterrows():
+        for _, row in sws_latest.iterrows():
             cur_rank = row["keyword_rank"]
             if pd.isna(cur_rank):
                 continue
-            match = prev_df[
-                (prev_df["country"] == row["country"]) & (prev_df["keyword"] == row["keyword"])
+            match = prev_sws[
+                (prev_sws["country"] == row["country"]) & (prev_sws["keyword"] == row["keyword"])
             ]
             if match.empty:
                 continue
@@ -286,7 +303,6 @@ with tab_summary:
                         "country": row["country"],
                         "keyword": row["keyword"],
                         "current": int(cur_rank),
-                        "previous": int(prev_rank),
                         "change": change,
                         "abs_change": abs(change),
                     }
@@ -313,7 +329,7 @@ with tab_summary:
     st.markdown("#### Finance Category Position")
     st.caption("Position in the App Store's Finance top-free chart per country.")
 
-    cat_data = latest_df.drop_duplicates(subset=["country"])[["country", "category_rank"]].copy()
+    cat_data = sws_latest.drop_duplicates(subset=["country"])[["country", "category_rank"]].copy()
     cat_cols = st.columns(min(len(cat_data), 5))
     for i, (_, row) in enumerate(cat_data.iterrows()):
         cat_val = row["category_rank"]
@@ -322,21 +338,20 @@ with tab_summary:
             st.metric(label=f"{row['country']} — Finance", value=display)
 
 
-# ── TAB 2: Country Deep-Dive ──────────────────────────────────────────────
+# ── TAB 2: Country Deep-Dive (Simply Wall St only) ─────────────────────────
 with tab_country:
     selected_country = st.selectbox(
         "Select a country",
         options=ALL_COUNTRIES,
-        format_func=lambda c: {"US": "🇺🇸 United States", "AU": "🇦🇺 Australia", "CA": "🇨🇦 Canada", "DE": "🇩🇪 Germany", "IN": "🇮🇳 India"}.get(c, c),
+        format_func=lambda c: COUNTRY_LABELS.get(c, c),
         key="deep_dive_country",
     )
 
-    country_latest = latest_df[latest_df["country"] == selected_country]
+    country_latest = sws_latest[sws_latest["country"] == selected_country]
 
     if country_latest.empty:
         st.info(f"No data available for {selected_country}.")
     else:
-        # Category rank header
         cat_row = country_latest.iloc[0]
         cat_val = cat_row["category_rank"]
         cat_display = f"#{int(cat_val)}" if pd.notna(cat_val) else "—  Unranked"
@@ -344,7 +359,6 @@ with tab_country:
         st.markdown(f"##### Finance Category: **{cat_display}**")
         st.divider()
 
-        # Keyword grid — 3 columns
         keywords = country_latest["keyword"].tolist()
         rows_needed = (len(keywords) + 2) // 3
 
@@ -359,18 +373,12 @@ with tab_country:
 
                 with cols[col_idx]:
                     display_val = f"#{cur}" if cur is not None else "—  Unranked"
-                    st.metric(
-                        label=kw.title(),
-                        value=display_val,
-                        delta=delta,
-                        delta_color=d_color,
-                    )
+                    st.metric(label=kw.title(), value=display_val, delta=delta, delta_color=d_color)
 
         st.divider()
 
-        # Mini trend chart for the selected country
-        st.markdown(f"##### Trend — {selected_country}")
-        country_hist = df[df["country"] == selected_country].dropna(subset=["keyword_rank"]).copy()
+        st.markdown(f"##### Trend — {COUNTRY_LABELS.get(selected_country, selected_country)}")
+        country_hist = sws_df[sws_df["country"] == selected_country].dropna(subset=["keyword_rank"]).copy()
 
         if country_hist.empty:
             st.info("No historical keyword data for this country yet.")
@@ -384,25 +392,124 @@ with tab_country:
                 labels={"keyword_rank": "Rank", "date": "", "keyword": ""},
                 color_discrete_sequence=px.colors.qualitative.Pastel,
             )
-            fig3.update_yaxes(autorange="reversed", range=[200, 1], title="Rank", gridcolor="rgba(128,128,160,0.15)")
-            fig3.update_xaxes(gridcolor="rgba(128,128,160,0.1)")
-            fig3.update_layout(
-                height=380,
-                hovermode="x unified",
-                plot_bgcolor="rgba(0,0,0,0)",
-                paper_bgcolor="rgba(0,0,0,0)",
-                margin=dict(l=20, r=20, t=10, b=20),
-                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
-            )
+            fig3 = _chart_layout(fig3, height=380)
             st.plotly_chart(fig3, use_container_width=True)
+
+
+# ── TAB 3: Competitor Battleground ──────────────────────────────────────────
+with tab_battle:
+    st.markdown("#### Head-to-Head Competitor Comparison")
+    st.caption("See how Simply Wall St stacks up against competitors for any keyword in any market.")
+
+    col_b1, col_b2 = st.columns(2)
+    with col_b1:
+        battle_country = st.selectbox(
+            "Country",
+            options=ALL_COUNTRIES,
+            format_func=lambda c: COUNTRY_LABELS.get(c, c),
+            key="battle_country",
+        )
+    with col_b2:
+        battle_keyword = st.selectbox(
+            "Keyword",
+            options=ALL_KEYWORDS,
+            key="battle_keyword",
+        )
+
+    # ── Leaderboard ──
+    st.markdown("##### Leaderboard")
+
+    battle_latest = latest_df[
+        (latest_df["country"] == battle_country) & (latest_df["keyword"] == battle_keyword)
+    ].copy()
+
+    if battle_latest.empty:
+        st.info("No data for this country/keyword combination yet. Run the tracker first.")
+    else:
+        # Sort: ranked apps first (ascending), then unranked
+        battle_latest["_sort"] = battle_latest["keyword_rank"].fillna(9999).astype(int)
+        battle_latest = battle_latest.sort_values("_sort")
+
+        # Build a clean display dataframe
+        leaderboard_rows = []
+        for pos, (_, row) in enumerate(battle_latest.iterrows(), start=1):
+            kw_rank = row["keyword_rank"]
+            is_ranked = pd.notna(kw_rank)
+            app = row["app_name"]
+
+            # Medal for top 3
+            medal = {1: "🥇", 2: "🥈", 3: "🥉"}.get(pos, "") if is_ranked else ""
+
+            leaderboard_rows.append(
+                {
+                    "": medal,
+                    "App": app,
+                    "Rank": f"#{int(kw_rank)}" if is_ranked else "Unranked",
+                    "is_ours": app == OUR_APP,
+                    "raw_rank": int(kw_rank) if is_ranked else None,
+                }
+            )
+
+        # Show as metric columns (up to 6 apps)
+        n_apps = len(leaderboard_rows)
+        cols = st.columns(min(n_apps, 6))
+        for i, entry in enumerate(leaderboard_rows):
+            with cols[i % len(cols)]:
+                label = f"{entry['']} {entry['App']}" if entry[""] else entry["App"]
+                val = entry["Rank"]
+
+                # Compute delta for this app
+                cur, delta, d_color = _compute_delta(
+                    df, battle_country, battle_keyword, app_name=entry["App"]
+                )
+
+                st.metric(label=label, value=val, delta=delta, delta_color=d_color)
+
+    st.divider()
+
+    # ── Battle Chart ──
+    st.markdown("##### Historical Trend")
+
+    battle_hist = df[
+        (df["country"] == battle_country) & (df["keyword"] == battle_keyword)
+    ].dropna(subset=["keyword_rank"]).copy()
+
+    if battle_hist.empty:
+        st.info("No historical data for this combination yet.")
+    else:
+        # Use consistent app colors
+        color_map = {app: APP_COLORS.get(app, "#888") for app in battle_hist["app_name"].unique()}
+
+        fig_battle = px.line(
+            battle_hist,
+            x="date",
+            y="keyword_rank",
+            color="app_name",
+            markers=True,
+            labels={"keyword_rank": "Rank Position", "date": "", "app_name": ""},
+            color_discrete_map=color_map,
+        )
+
+        # Make Simply Wall St line thicker
+        for trace in fig_battle.data:
+            if trace.name == OUR_APP:
+                trace.update(line=dict(width=4))
+            else:
+                trace.update(line=dict(width=2, dash="dot"))
+
+        fig_battle = _chart_layout(fig_battle, height=480)
+        fig_battle.add_hline(
+            y=1, line_dash="dot", line_color="gold", opacity=0.4, annotation_text="#1"
+        )
+        st.plotly_chart(fig_battle, use_container_width=True)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  RAW DATA EXPANDER
 # ═══════════════════════════════════════════════════════════════════════════
 with st.expander("📋 Raw Data"):
-    st.dataframe(
-        df.sort_values(["date", "country", "keyword"], ascending=[False, True, True]),
-        use_container_width=True,
-        hide_index=True,
+    display_df = df.sort_values(
+        ["date", "app_name", "country", "keyword"],
+        ascending=[False, True, True, True],
     )
+    st.dataframe(display_df, use_container_width=True, hide_index=True)
