@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python tracker.py)",
+      "Bash(python3 tracker.py)",
+      "Bash(pip3 install:*)",
+      "Bash(python3 -c \":*)",
+      "Bash(gh auth:*)"
+    ]
+  }
+}

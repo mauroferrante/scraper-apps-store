@@ -1,0 +1,36 @@
+name: Daily App Store Ranking Tracker
+
+on:
+  schedule:
+    - cron: "0 0 * * *"  # Every day at 00:00 UTC
+  workflow_dispatch:       # Allow manual runs
+
+permissions:
+  contents: write
+
+jobs:
+  track-rankings:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run tracker
+        run: python tracker.py
+
+      - name: Commit and push updated rankings
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add rankings_history.csv
+          git diff --cached --quiet || git commit -m "Update rankings data $(date -u +%Y-%m-%d)"
+          git push
