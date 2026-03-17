@@ -1,40 +1,40 @@
-date,country,keyword,keyword_rank,category_rank
-2026-03-17,US,stock analysis,13,N/A
-2026-03-17,US,investing,55,N/A
-2026-03-17,US,dividend tracker,,N/A
-2026-03-17,AU,stock analysis,16,N/A
-2026-03-17,AU,investing,57,N/A
-2026-03-17,AU,dividend tracker,,N/A
-2026-03-17,CA,stock analysis,10,N/A
-2026-03-17,CA,investing,50,N/A
-2026-03-17,CA,dividend tracker,,N/A
-2026-03-17,DE,stock analysis,11,N/A
-2026-03-17,DE,investing,,N/A
-2026-03-17,DE,dividend tracker,,N/A
-2026-03-17,US,stock analysis,13,
-2026-03-17,US,investing,55,
-2026-03-17,US,dividend tracker,,
-2026-03-17,US,stock research,8,
-2026-03-17,US,stock investing,50,
-2026-03-17,US,portfolio tracker,9,
-2026-03-17,AU,stock analysis,16,
-2026-03-17,AU,investing,57,
-2026-03-17,AU,dividend tracker,,
-2026-03-17,AU,stock research,11,
-2026-03-17,AU,stock investing,143,
-2026-03-17,AU,portfolio tracker,27,
-2026-03-17,CA,stock analysis,10,
-2026-03-17,CA,investing,50,
-2026-03-17,CA,dividend tracker,,
-2026-03-17,CA,stock research,8,
-2026-03-17,CA,stock investing,29,
-2026-03-17,CA,portfolio tracker,14,
-2026-03-17,DE,stock analysis,11,
-2026-03-17,DE,investing,,
-2026-03-17,DE,dividend tracker,,
-2026-03-17,DE,stock research,4,
-2026-03-17,DE,stock investing,163,
-2026-03-17,DE,portfolio tracker,25,
+date,app_name,country,keyword,keyword_rank,category_rank
+2026-03-17,Simply Wall St,US,stock analysis,13,N/A
+2026-03-17,Simply Wall St,US,investing,55,N/A
+2026-03-17,Simply Wall St,US,dividend tracker,,N/A
+2026-03-17,Simply Wall St,AU,stock analysis,16,N/A
+2026-03-17,Simply Wall St,AU,investing,57,N/A
+2026-03-17,Simply Wall St,AU,dividend tracker,,N/A
+2026-03-17,Simply Wall St,CA,stock analysis,10,N/A
+2026-03-17,Simply Wall St,CA,investing,50,N/A
+2026-03-17,Simply Wall St,CA,dividend tracker,,N/A
+2026-03-17,Simply Wall St,DE,stock analysis,11,N/A
+2026-03-17,Simply Wall St,DE,investing,,N/A
+2026-03-17,Simply Wall St,DE,dividend tracker,,N/A
+2026-03-17,Simply Wall St,US,stock analysis,13,
+2026-03-17,Simply Wall St,US,investing,55,
+2026-03-17,Simply Wall St,US,dividend tracker,,
+2026-03-17,Simply Wall St,US,stock research,8,
+2026-03-17,Simply Wall St,US,stock investing,50,
+2026-03-17,Simply Wall St,US,portfolio tracker,9,
+2026-03-17,Simply Wall St,AU,stock analysis,16,
+2026-03-17,Simply Wall St,AU,investing,57,
+2026-03-17,Simply Wall St,AU,dividend tracker,,
+2026-03-17,Simply Wall St,AU,stock research,11,
+2026-03-17,Simply Wall St,AU,stock investing,143,
+2026-03-17,Simply Wall St,AU,portfolio tracker,27,
+2026-03-17,Simply Wall St,CA,stock analysis,10,
+2026-03-17,Simply Wall St,CA,investing,50,
+2026-03-17,Simply Wall St,CA,dividend tracker,,
+2026-03-17,Simply Wall St,CA,stock research,8,
+2026-03-17,Simply Wall St,CA,stock investing,29,
+2026-03-17,Simply Wall St,CA,portfolio tracker,14,
+2026-03-17,Simply Wall St,DE,stock analysis,11,
+2026-03-17,Simply Wall St,DE,investing,,
+2026-03-17,Simply Wall St,DE,dividend tracker,,
+2026-03-17,Simply Wall St,DE,stock research,4,
+2026-03-17,Simply Wall St,DE,stock investing,163,
+2026-03-17,Simply Wall St,DE,portfolio tracker,25,
 2026-03-17,Simply Wall St,US,stock analysis,13,
 2026-03-17,Sharesight,US,stock analysis,,
 2026-03-17,Snowball Analytics,US,stock analysis,105,
@@ -179,42 +179,6 @@ date,country,keyword,keyword_rank,category_rank
 2026-03-17,Seeking Alpha,DE,portfolio tracker,11,
 2026-03-17,Yahoo Finance,DE,portfolio tracker,6,
 2026-03-17,MarketWatch,DE,portfolio tracker,,
-2026-03-17,Simply Wall St,IN,stock analysis,13,
-2026-03-17,Sharesight,IN,stock analysis,,
-2026-03-17,Snowball Analytics,IN,stock analysis,,
-2026-03-17,Seeking Alpha,IN,stock analysis,14,
-2026-03-17,Yahoo Finance,IN,stock analysis,4,
-2026-03-17,MarketWatch,IN,stock analysis,12,
-2026-03-17,Simply Wall St,IN,investing,,
-2026-03-17,Sharesight,IN,investing,,
-2026-03-17,Snowball Analytics,IN,investing,,
-2026-03-17,Seeking Alpha,IN,investing,155,
-2026-03-17,Yahoo Finance,IN,investing,15,
-2026-03-17,MarketWatch,IN,investing,119,
-2026-03-17,Simply Wall St,IN,dividend tracker,,
-2026-03-17,Sharesight,IN,dividend tracker,30,
-2026-03-17,Snowball Analytics,IN,dividend tracker,9,
-2026-03-17,Seeking Alpha,IN,dividend tracker,143,
-2026-03-17,Yahoo Finance,IN,dividend tracker,14,
-2026-03-17,MarketWatch,IN,dividend tracker,,
-2026-03-17,Simply Wall St,IN,stock research,9,
-2026-03-17,Sharesight,IN,stock research,,
-2026-03-17,Snowball Analytics,IN,stock research,,
-2026-03-17,Seeking Alpha,IN,stock research,7,
-2026-03-17,Yahoo Finance,IN,stock research,11,
-2026-03-17,MarketWatch,IN,stock research,,
-2026-03-17,Simply Wall St,IN,stock investing,,
-2026-03-17,Sharesight,IN,stock investing,,
-2026-03-17,Snowball Analytics,IN,stock investing,,
-2026-03-17,Seeking Alpha,IN,stock investing,,
-2026-03-17,Yahoo Finance,IN,stock investing,2,
-2026-03-17,MarketWatch,IN,stock investing,,
-2026-03-17,Simply Wall St,IN,portfolio tracker,17,
-2026-03-17,Sharesight,IN,portfolio tracker,50,
-2026-03-17,Snowball Analytics,IN,portfolio tracker,27,
-2026-03-17,Seeking Alpha,IN,portfolio tracker,22,
-2026-03-17,Yahoo Finance,IN,portfolio tracker,5,
-2026-03-17,MarketWatch,IN,portfolio tracker,,
 2026-03-17,Simply Wall St,GB,stock analysis,17,
 2026-03-17,Sharesight,GB,stock analysis,,
 2026-03-17,Snowball Analytics,GB,stock analysis,,
