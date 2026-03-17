@@ -26,11 +26,10 @@ APPS = [
 COUNTRIES = ["US", "AU", "CA", "DE", "GB"]
 KEYWORDS = [
     "stock analysis",
-    "dividend tracker",
     "stock research",
     "stock screener",
     "portfolio tracker",
-    "investment ideas",
+    "dividend tracker",
 ]
 
 CSV_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "rankings_history.csv")

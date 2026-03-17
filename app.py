@@ -98,7 +98,20 @@ if df.empty:
 sws_df = df[df["app_name"] == OUR_APP].copy()  # Simply Wall St only
 
 ALL_COUNTRIES = sorted(df["country"].unique().tolist())
-ALL_KEYWORDS = sorted(df["keyword"].unique().tolist())
+
+# Custom keyword sort: priority keywords first, then any legacy keywords alphabetically
+_KEYWORD_PRIORITY = [
+    "stock analysis",
+    "stock research",
+    "stock screener",
+    "portfolio tracker",
+    "dividend tracker",
+]
+_all_kw_set = set(df["keyword"].unique())
+ALL_KEYWORDS = [k for k in _KEYWORD_PRIORITY if k in _all_kw_set] + sorted(
+    _all_kw_set - set(_KEYWORD_PRIORITY)
+)
+
 ALL_APPS = sorted(df["app_name"].unique().tolist())
 LATEST_DATE = df["date"].max()
 latest_df = df[df["date"] == LATEST_DATE]
