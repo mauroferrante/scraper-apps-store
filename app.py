@@ -19,6 +19,7 @@ def load_data() -> pd.DataFrame:
     df = pd.read_csv(CSV_FILE)
     df["date"] = pd.to_datetime(df["date"])
     df["keyword_rank"] = pd.to_numeric(df["keyword_rank"], errors="coerce")
+    df["category_rank"] = pd.to_numeric(df["category_rank"], errors="coerce")
     return df
 
 
@@ -48,11 +49,41 @@ if selected_country != "All":
 if selected_keyword != "All":
     filtered = filtered[filtered["keyword"] == selected_keyword]
 
-# ---------- Summary metrics ----------
-st.subheader("Current Rankings")
+# ---------- Finance Category Ranking ----------
+st.subheader("Finance Category Ranking")
 
 latest_date = filtered["date"].max()
 latest = filtered[filtered["date"] == latest_date]
+
+if latest.empty:
+    st.info("No data for the selected filters.")
+else:
+    # Category rank is the same for all keywords in a country, so deduplicate
+    cat_data = latest.drop_duplicates(subset=["country"])[["country", "category_rank"]].copy()
+    cat_cols = st.columns(min(len(cat_data), 5))
+    for i, (_, row) in enumerate(cat_data.iterrows()):
+        cat_val = row["category_rank"]
+        display = int(cat_val) if pd.notna(cat_val) else "N/A"
+
+        # Delta from previous day
+        prev_cat = filtered[
+            (filtered["date"] < latest_date) & (filtered["country"] == row["country"])
+        ].drop_duplicates(subset=["country", "date"]).sort_values("date")
+        delta = None
+        delta_color = "off"
+        if not prev_cat.empty:
+            prev_val = prev_cat.iloc[-1]["category_rank"]
+            if pd.notna(prev_val) and pd.notna(cat_val):
+                change = int(prev_val - cat_val)
+                if change != 0:
+                    delta = f"{'+' if change > 0 else ''}{change}"
+                    delta_color = "normal"
+
+        with cat_cols[i % len(cat_cols)]:
+            st.metric(label=f"{row['country']} - Finance", value=display, delta=delta, delta_color=delta_color)
+
+# ---------- Keyword Rankings ----------
+st.subheader("Keyword Rankings")
 
 if latest.empty:
     st.info("No data for the selected filters.")
@@ -83,28 +114,44 @@ else:
         with metric_cols[col_idx]:
             st.metric(label=label, value=display, delta=delta, delta_color=delta_color)
 
-# ---------- Chart ----------
-st.subheader("Rank Trend Over Time")
+# ---------- Charts ----------
+tab_keyword, tab_category = st.tabs(["Keyword Rank Trend", "Category Rank Trend"])
 
-if filtered[filtered["keyword_rank"].notna()].empty:
-    st.info("No ranking data to chart for the selected filters.")
-else:
-    chart_df = filtered.dropna(subset=["keyword_rank"]).copy()
-    chart_df["label"] = chart_df["country"] + " | " + chart_df["keyword"]
+with tab_keyword:
+    if filtered[filtered["keyword_rank"].notna()].empty:
+        st.info("No keyword ranking data to chart for the selected filters.")
+    else:
+        chart_df = filtered.dropna(subset=["keyword_rank"]).copy()
+        chart_df["label"] = chart_df["country"] + " | " + chart_df["keyword"]
 
-    fig = px.line(
-        chart_df,
-        x="date",
-        y="keyword_rank",
-        color="label",
-        markers=True,
-        labels={"keyword_rank": "Rank", "date": "Date", "label": "Country | Keyword"},
-    )
-    # Lower rank number = better, so invert y-axis
-    fig.update_yaxes(autorange="reversed", title="Rank (lower is better)")
-    fig.update_layout(height=500, hovermode="x unified")
+        fig = px.line(
+            chart_df,
+            x="date",
+            y="keyword_rank",
+            color="label",
+            markers=True,
+            labels={"keyword_rank": "Rank", "date": "Date", "label": "Country | Keyword"},
+        )
+        fig.update_yaxes(autorange="reversed", title="Rank (lower is better)")
+        fig.update_layout(height=500, hovermode="x unified")
+        st.plotly_chart(fig, use_container_width=True)
 
-    st.plotly_chart(fig, use_container_width=True)
+with tab_category:
+    cat_chart = filtered.drop_duplicates(subset=["date", "country"]).dropna(subset=["category_rank"]).copy()
+    if cat_chart.empty:
+        st.info("No category ranking data to chart for the selected filters.")
+    else:
+        fig2 = px.line(
+            cat_chart,
+            x="date",
+            y="category_rank",
+            color="country",
+            markers=True,
+            labels={"category_rank": "Finance Category Rank", "date": "Date", "country": "Country"},
+        )
+        fig2.update_yaxes(autorange="reversed", title="Rank (lower is better)")
+        fig2.update_layout(height=500, hovermode="x unified")
+        st.plotly_chart(fig2, use_container_width=True)
 
 # ---------- Raw data ----------
 with st.expander("Raw Data"):

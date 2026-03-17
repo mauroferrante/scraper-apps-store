@@ -16,12 +16,33 @@ APP_ID = 1075614972
 APP_BUNDLE_ID = "com.simplywallst.app"
 
 COUNTRIES = ["US", "AU", "CA", "DE", "IN"]
-KEYWORDS = ["stock analysis", "investing", "dividend tracker"]
+KEYWORDS = ["stock analysis", "investing", "dividend tracker", "stock research", "stock investing", "portfolio tracker"]
 
 CSV_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "rankings_history.csv")
 CSV_HEADERS = ["date", "country", "keyword", "keyword_rank", "category_rank"]
 
 ITUNES_SEARCH_URL = "https://itunes.apple.com/search"
+ITUNES_RSS_URL = "https://itunes.apple.com/{country}/rss/topfreeapplications/genre=6015/limit=200/json"
+
+
+def get_category_rank(country: str) -> int | None:
+    """Return the app's position in the Finance (6015) top-free chart, or None."""
+    url = ITUNES_RSS_URL.format(country=country.lower())
+    try:
+        resp = requests.get(url, timeout=30)
+        resp.raise_for_status()
+        entries = resp.json().get("feed", {}).get("entry", [])
+    except (requests.RequestException, ValueError, KeyError) as exc:
+        print(f"  [ERROR] Category rank for {country}: {exc}")
+        return None
+
+    for position, entry in enumerate(entries, start=1):
+        app_id = entry.get("id", {}).get("attributes", {}).get("im:id", "")
+        bundle_id = entry.get("id", {}).get("attributes", {}).get("im:bundleId", "")
+        if str(app_id) == str(APP_ID) or bundle_id == APP_BUNDLE_ID:
+            return position
+
+    return None
 
 
 def get_keyword_rank(keyword: str, country: str) -> int | None:
@@ -74,12 +95,18 @@ def main() -> None:
     print("-" * 50)
 
     for country in COUNTRIES:
+        # Fetch Finance category rank once per country
+        cat_rank = get_category_rank(country)
+        cat_display = cat_rank if cat_rank is not None else "Not in top 200"
+        print(f"  {country} | Finance category rank -> {cat_display}")
+        time.sleep(1)
+
         for keyword in KEYWORDS:
             rank = get_keyword_rank(keyword, country)
             rank_display = rank if rank is not None else "Not in top 200"
             print(f"  {country} | '{keyword}' -> {rank_display}")
 
-            rows.append([today, country, keyword, rank, "N/A"])
+            rows.append([today, country, keyword, rank, cat_rank])
 
             # Be polite to Apple's API
             time.sleep(1)
