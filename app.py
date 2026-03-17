@@ -463,20 +463,51 @@ with tab_battle:
                 }
             )
 
-        # Show as metric columns (up to 6 apps)
-        n_apps = len(leaderboard_rows)
-        cols = st.columns(min(n_apps, 6))
-        for i, entry in enumerate(leaderboard_rows):
-            with cols[i % len(cols)]:
-                label = f"{entry['']} {entry['App']}" if entry[""] else entry["App"]
-                val = entry["Rank"]
+        # Show as custom HTML cards (up to 6 apps)
+        cards_html = '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:1rem;">'
+        for entry in leaderboard_rows:
+            label = f"{entry['']} {entry['App']}" if entry[""] else entry["App"]
+            val = entry["Rank"]
+            is_ours = entry["is_ours"]
 
-                # Compute delta for this app
-                cur, delta, d_color = _compute_delta(
-                    df, battle_country, battle_keyword, app_name=entry["App"]
-                )
+            # Compute delta
+            cur, delta, d_color = _compute_delta(
+                df, battle_country, battle_keyword, app_name=entry["App"]
+            )
 
-                st.metric(label=label, value=val, delta=delta, delta_color=d_color)
+            # Delta badge
+            delta_html = ""
+            if delta:
+                d_val = delta.replace(" ", "")
+                if d_color == "normal":  # rank improved = green
+                    d_style = "color:#22c55e;"
+                elif d_color == "inverse":  # rank worsened = red
+                    d_style = "color:#ef4444;"
+                else:
+                    d_style = "color:#9ca3af;"
+                delta_html = f'<div style="font-size:0.78rem;margin-top:2px;{d_style}">{delta}</div>'
+
+            if is_ours:
+                border = "border:2px solid #3b82f6;"
+                bg = "background:linear-gradient(135deg,#1e293b 0%,#1e3a5f 100%);"
+                shadow = "box-shadow:0 0 12px rgba(59,130,246,0.25);"
+                name_style = "color:#60a5fa;font-weight:700;"
+            else:
+                border = "border:1px solid #334155;"
+                bg = "background:#1e1e2e;"
+                shadow = ""
+                name_style = "color:#cbd5e1;font-weight:500;"
+
+            cards_html += (
+                f'<div style="flex:1 1 140px;min-width:130px;max-width:220px;'
+                f'border-radius:12px;padding:16px 14px;{border}{bg}{shadow}">'
+                f'<div style="{name_style}font-size:0.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{label}</div>'
+                f'<div style="color:#f1f5f9;font-size:1.6rem;font-weight:800;margin-top:4px;">{val}</div>'
+                f'{delta_html}'
+                f'</div>'
+            )
+        cards_html += '</div>'
+        st.markdown(cards_html, unsafe_allow_html=True)
 
     st.divider()
 
